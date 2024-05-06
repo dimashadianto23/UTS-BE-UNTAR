@@ -1,11 +1,28 @@
 const { User } = require('../../../models');
 
 /**
- * Get a list of users
+ * Get a list of users with search and sorting
+ * @param {object} searchQuery - Query object for search
+ * @param {string} sortBy - Field to sort by
+ * @param {number} sortOrder - Sort order (-1 for descending, 1 for ascending)
+ * @param {number} skip - Number of documents to skip
+ * @param {number} limit - Maximum number of documents to return
  * @returns {Promise}
  */
-async function getUsers() {
-  return User.find({});
+async function getUsersWithSearchAndSort(searchQuery, sortBy, sortOrder, skip, limit) {
+  return User.find(searchQuery)
+    .sort({ [sortBy]: sortOrder })
+    .skip(skip)
+    .limit(limit);
+}
+
+/**
+ * Get total count of users with search
+ * @param {object} searchQuery - Query object for search
+ * @returns {Promise}
+ */
+async function getTotalUsersCountWithSearch(searchQuery) {
+  return User.countDocuments(searchQuery);
 }
 
 /**
@@ -82,7 +99,8 @@ async function changePassword(id, password) {
 }
 
 module.exports = {
-  getUsers,
+  getUsersWithSearchAndSort,
+  getTotalUsersCountWithSearch,
   getUser,
   createUser,
   updateUser,

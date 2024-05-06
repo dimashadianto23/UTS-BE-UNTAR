@@ -2,23 +2,52 @@ const usersRepository = require('./users-repository');
 const { hashPassword, passwordMatched } = require('../../../utils/password');
 
 /**
- * Get list of users
- * @returns {Array}
+ * Get list of users with pagination, search, and sorting
+ * @param {number} pageNumber - Page number
+ * @param {number} pageSize - Number of users per page
+ * @param {string} search - Search query for email
+ * @param {string} sort - Sort field and order (e.g., "email:desc")
+ * @returns {Object} - Object containing users data and pagination information
  */
-async function getUsers() {
-  const users = await usersRepository.getUsers();
+async function getUsers(pageNumber, pageSize, search, sort) {
+  let sortBy = null;
+  let sortOrder = 1;
+  if (sort) {
+    const [sortField, order] = sort.split(':');
+    sortBy = sortField;
+    sortOrder = order === 'desc' ? -1 : 1;
+  }
 
-  const results = [];
-  for (let i = 0; i < users.length; i += 1) {
-    const user = users[i];
-    results.push({
+  const searchText = search ? search.trim().replace(/^email:/i, '') : '';
+
+  const searchQuery = searchText ? { email: { $regex: `.*${searchText}.*`, $options: 'i' } } : {};
+
+  const skip = (pageNumber - 1) * pageSize;
+
+  const users = await usersRepository.getUsersWithSearchAndSort(
+    searchQuery,
+    sortBy,
+    sortOrder,
+    skip,
+    pageSize
+  );
+
+  const totalUsers = await usersRepository.getTotalUsersCountWithSearch(searchQuery);
+  const totalPages = Math.ceil(totalUsers / pageSize);
+
+  return {
+    page_number: pageNumber,
+    page_size: pageSize,
+    count: users.length,
+    total_pages: totalPages,
+    has_previous_page: pageNumber > 1,
+    has_next_page: pageNumber < totalPages,
+    data: users.map(user => ({
       id: user.id,
       name: user.name,
       email: user.email,
-    });
-  }
-
-  return results;
+    })),
+  };
 }
 
 /**
